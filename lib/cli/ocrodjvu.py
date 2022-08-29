@@ -13,11 +13,15 @@
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 
-from __future__ import print_function
-from __future__ import unicode_literals
+# from __future__ import print_function
+# from __future__ import unicode_literals
 
-from future import standard_library
-standard_library.install_aliases()
+# from future import standard_library
+# import print_function
+# import unicode_literals
+# import standard_library
+
+# standard_library.install_aliases()
 from builtins import str
 from builtins import range
 from builtins import object
@@ -52,6 +56,7 @@ system_encoding = locale.getpreferredencoding()
 
 logger = logger.setup()
 
+
 class Saver(object):
 
     in_place = False
@@ -69,13 +74,14 @@ class Saver(object):
 
     @utils.not_overridden
     def save(self, document, pages, djvu_path, sed_file):
-        raise NotImplementedError('Cannot save results in this format')  # no coverage
+        raise NotImplementedError("Cannot save results in this format")  # no coverage
+
 
 class BundledSaver(Saver):
 
-    '''save results as a bundled multi-page document'''
+    """save results as a bundled multi-page document"""
 
-    options = '-o', '--save-bundled'
+    options = "-o", "--save-bundled"
 
     def __init__(self, save_path):
         self._ips = InPlaceSaver()
@@ -85,18 +91,19 @@ class BundledSaver(Saver):
         self._ips.check()
 
     def save(self, document, pages, djvu_path, sed_file):
-        file = open(self._save_path, 'wb')
+        file = open(self._save_path, "wb")
         try:
             document.save(file=file, pages=pages)
         finally:
             file.close()
         self._ips.save(None, pages, self._save_path, sed_file)
 
+
 class IndirectSaver(Saver):
 
-    '''save results as an indirect multi-page document'''
+    """save results as an indirect multi-page document"""
 
-    options = '-i', '--save-indirect'
+    options = "-i", "--save-indirect"
 
     def __init__(self, save_path):
         self._ips = InPlaceSaver()
@@ -109,11 +116,12 @@ class IndirectSaver(Saver):
         document.save(indirect=self._save_path, pages=pages)
         self._ips.save(None, pages, self._save_path, sed_file)
 
+
 class ScriptSaver(Saver):
 
-    '''save a djvused script with results'''
+    """save a djvused script with results"""
 
-    options = '--save-script',
+    options = ("--save-script",)
 
     def __init__(self, save_path):
         self._save_path = os.path.abspath(save_path)
@@ -121,49 +129,52 @@ class ScriptSaver(Saver):
     def save(self, document, pages, djvu_path, sed_file):
         shutil.copyfile(sed_file.name, self._save_path)
 
+
 class InPlaceSaver(Saver):
 
-    '''save results in-place'''
+    """save results in-place"""
 
-    options = '--in-place',
+    options = ("--in-place",)
     in_place = True
 
     def check(self):
-        ipc.require('djvused')
+        ipc.require("djvused")
 
     def save(self, document, pages, djvu_path, sed_file):
         sed_file_name = os.path.abspath(sed_file.name)
         djvu_path = os.path.abspath(djvu_path)
         djvused = ipc.Subprocess(
-            ['djvused', '-s', '-f', sed_file_name, djvu_path],
+            ["djvused", "-s", "-f", sed_file_name, djvu_path],
         )
         djvused.wait()
 
+
 class DryRunSaver(Saver):
 
-    '''don't change any files'''
+    """don't change any files"""
 
-    options = '--dry-run',
+    options = ("--dry-run",)
 
     def save(self, document, pages, djvu_path, sed_file):
         pass
 
+
 def expand_template(template, pageno, pageid):
     d = {
-        'page': pageno,
-        'id': pageid,
-        'id-ext': os.path.splitext(pageid)[0],
+        "page": pageno,
+        "id": pageid,
+        "id-ext": os.path.splitext(pageid)[0],
     }
     formatter = string.Formatter()
     for _, var, _, _ in formatter.parse(template):
         if var is None:
             continue
-        if '+' in var:
+        if "+" in var:
             sign = +1
-            base_var, offset = var.split('+')
-        elif '-' in var:
+            base_var, offset = var.split("+")
+        elif "-" in var:
             sign = -1
-            base_var, offset = var.split('-')
+            base_var, offset = var.split("-")
         else:
             continue
         try:
@@ -179,9 +190,10 @@ def expand_template(template, pageno, pageid):
         d[var] = d[base_var] + offset
     return formatter.vformat(template, (), d)
 
+
 class EngineChoices(object):
 
-    default = 'tesseract'
+    default = "tesseract"
 
     def __init__(self):
         self._data = data = {}
@@ -189,11 +201,7 @@ class EngineChoices(object):
             data[eng.name] = eng
 
     def __iter__(self):
-        return iter(sorted(
-            key
-            for key in self._data
-            if key[0] != '_'
-        ))
+        return iter(sorted(key for key in self._data if key[0] != "_"))
 
     def __contains__(self, key):
         return key in self._data
@@ -201,25 +209,26 @@ class EngineChoices(object):
     def __getitem__(self, key):
         return self._data[key]
 
+
 class HelpFormatter(argparse.HelpFormatter):
 
-    important_options = set(['-e', '-l', '-j'])
+    important_options = set(["-e", "-l", "-j"])
 
     def add_usage(self, usage, actions, groups, prefix=None):
         orig_actions = actions
         actions = [
-            act for act in orig_actions
+            act
+            for act in orig_actions
             if set(act.option_strings) & self.important_options
         ]
-        actions += [argparse.Action(['options'], 'options', nargs=0, required=False)]
+        actions += [argparse.Action(["options"], "options", nargs=0, required=False)]
         actions += [
-            act for act in orig_actions
-            if (
-                act.required or
-                isinstance(act, ArgumentParser.set_output)
-            )
+            act
+            for act in orig_actions
+            if (act.required or isinstance(act, ArgumentParser.set_output))
         ]
         return argparse.HelpFormatter.add_usage(self, usage, actions, groups, prefix)
+
 
 class ArgumentParser(cli.ArgumentParser):
 
@@ -240,51 +249,155 @@ class ArgumentParser(cli.ArgumentParser):
 
     def __init__(self):
         cli.ArgumentParser.__init__(self, formatter_class=HelpFormatter)
-        self.add_argument('--version', action=version.VersionAction)
-        group = self.add_argument_group(title='options controlling output')
+        self.add_argument("--version", action=version.VersionAction)
+        group = self.add_argument_group(title="options controlling output")
         saver_group = group.add_mutually_exclusive_group(required=True)
         for saver_type in self.savers:
             options = saver_type.options
             n_args = saver_type.get_n_args()
-            metavar = [None, 'FILE'][n_args]
+            metavar = [None, "FILE"][n_args]
             saver_group.add_argument(
                 *options,
                 **dict(
                     metavar=metavar,
                     action=self.set_output,
-                    saver_type=saver_type, nargs=n_args,
-                    help=saver_type.__doc__
+                    saver_type=saver_type,
+                    nargs=n_args,
+                    help=saver_type.__doc__,
                 )
             )
-        group.add_argument('--ocr-only', dest='ocr_only', action='store_true', default=False, help='''don't save pages without OCR''')
-        group.add_argument('--clear-text', dest='clear_text', action='store_true', default=False, help='remove existing hidden text')
-        group.add_argument('--save-raw-ocr', dest='save_raw_ocr_dir', metavar='DIRECTORY', help='save raw OCR output')
-        group.add_argument('--raw-ocr-filename-template', metavar='TEMPLATE', default='{id-ext}', help='file naming scheme for raw OCR')
-        self.add_argument('-e', '--engine', dest='engine', choices=self.engines, metavar='ENGINE', help='OCR engine to use (default: {0})'.format(self.engines.default))
-        self.add_argument('--list-engines', action=self.list_engines, nargs=0, help='print list of available OCR engines')
-        self.add_argument('-l', '--language', dest='language', help='set recognition language')
-        self.add_argument('--list-languages', action=self.list_languages, nargs=0, help='print list of available languages')
-        self.add_argument('--render', dest='render_layers', choices=list(self._render_map.keys()), action='store', default='mask', help='image layers to render')
+        group.add_argument(
+            "--ocr-only",
+            dest="ocr_only",
+            action="store_true",
+            default=False,
+            help="""don't save pages without OCR""",
+        )
+        group.add_argument(
+            "--clear-text",
+            dest="clear_text",
+            action="store_true",
+            default=False,
+            help="remove existing hidden text",
+        )
+        group.add_argument(
+            "--save-raw-ocr",
+            dest="save_raw_ocr_dir",
+            metavar="DIRECTORY",
+            help="save raw OCR output",
+        )
+        group.add_argument(
+            "--raw-ocr-filename-template",
+            metavar="TEMPLATE",
+            default="{id-ext}",
+            help="file naming scheme for raw OCR",
+        )
+        self.add_argument(
+            "-e",
+            "--engine",
+            dest="engine",
+            choices=self.engines,
+            metavar="ENGINE",
+            help="OCR engine to use (default: {0})".format(self.engines.default),
+        )
+        self.add_argument(
+            "--list-engines",
+            action=self.list_engines,
+            nargs=0,
+            help="print list of available OCR engines",
+        )
+        self.add_argument(
+            "-l", "--language", dest="language", help="set recognition language"
+        )
+        self.add_argument(
+            "--list-languages",
+            action=self.list_languages,
+            nargs=0,
+            help="print list of available languages",
+        )
+        self.add_argument(
+            "--render",
+            dest="render_layers",
+            choices=list(self._render_map.keys()),
+            action="store",
+            default="mask",
+            help="image layers to render",
+        )
+
         def pages(x):
             return utils.parse_page_numbers(x)
-        self.add_argument('-p', '--pages', dest='pages', action='store', default=None, type=pages, help='pages to process')
+
+        self.add_argument(
+            "-p",
+            "--pages",
+            dest="pages",
+            action="store",
+            default=None,
+            type=pages,
+            help="pages to process",
+        )
+
         def jobs(s):
-            if s == 'auto':
+            if s == "auto":
                 return utils.get_cpu_count()
             n = int(s)
             if n <= 0:
                 raise ValueError
             return n
-        self.add_argument('-j', '--jobs', dest='n_jobs', metavar='N', type=jobs, default=1, help='start N OCR threads')
-        self.add_argument('path', metavar='FILE', help='DjVu file to process')
-        group = self.add_argument_group(title='text segmentation options')
-        group.add_argument('-t', '--details', dest='details', choices=('lines', 'words', 'chars'), action='store', default='words', help='amount of text details to extract')
-        group.add_argument('--word-segmentation', dest='word_segmentation', choices=('simple', 'uax29'), default='simple', help='word segmentation algorithm')
-        group = self.add_argument_group(title='advanced options')
-        group.add_argument('-D', '--debug', dest='debug', action='store_true', default=False, help='''don't delete intermediate files''')
-        group.add_argument('-X', dest='properties', metavar='KEY=VALUE', help='set an engine-specific property', action='append', default=[])
-        group.add_argument('--on-error', choices=('abort', 'resume'), default='abort', help='error handling strategy')
-        group.add_argument('--html5', dest='html5', action='store_true', help='use HTML5 parser')
+
+        self.add_argument(
+            "-j",
+            "--jobs",
+            dest="n_jobs",
+            metavar="N",
+            type=jobs,
+            default=1,
+            help="start N OCR threads",
+        )
+        self.add_argument("path", metavar="FILE", help="DjVu file to process")
+        group = self.add_argument_group(title="text segmentation options")
+        group.add_argument(
+            "-t",
+            "--details",
+            dest="details",
+            choices=("lines", "words", "chars"),
+            action="store",
+            default="words",
+            help="amount of text details to extract",
+        )
+        group.add_argument(
+            "--word-segmentation",
+            dest="word_segmentation",
+            choices=("simple", "uax29"),
+            default="simple",
+            help="word segmentation algorithm",
+        )
+        group = self.add_argument_group(title="advanced options")
+        group.add_argument(
+            "-D",
+            "--debug",
+            dest="debug",
+            action="store_true",
+            default=False,
+            help="""don't delete intermediate files""",
+        )
+        group.add_argument(
+            "-X",
+            dest="properties",
+            metavar="KEY=VALUE",
+            help="set an engine-specific property",
+            action="append",
+            default=[],
+        )
+        group.add_argument(
+            "--on-error",
+            choices=("abort", "resume"),
+            default="abort",
+            help="error handling strategy",
+        )
+        group.add_argument(
+            "--html5", dest="html5", action="store_true", help="use HTML5 parser"
+        )
 
     class list_engines(argparse.Action):
         def __call__(self, parser, namespace, values, option_string=None):
@@ -314,8 +427,9 @@ class ArgumentParser(cli.ArgumentParser):
 
     class set_output(argparse.Action):
         def __init__(self, **kwargs):
-            self.saver_type = kwargs.pop('saver_type')
+            self.saver_type = kwargs.pop("saver_type")
             argparse.Action.__init__(self, **kwargs)
+
         def __call__(self, parser, namespace, values, option_string=None):
             namespace.saver = self.saver_type(*values)
 
@@ -323,34 +437,42 @@ class ArgumentParser(cli.ArgumentParser):
         options = cli.ArgumentParser.parse_args(self, args, namespace)
         options.details = self._details_map[options.details]
         options.render_layers = self._render_map[options.render_layers]
-        options.resume_on_error = options.on_error == 'resume'
+        options.resume_on_error = options.on_error == "resume"
         try:
             options.saver.check()
         except OSError as exc:
-            errors.fatal('cannot find {path!r}: {msg}'.format(
-                path=exc.filename,
-                msg=exc.strerror,
-            ))
+            errors.fatal(
+                "cannot find {path!r}: {msg}".format(
+                    path=exc.filename,
+                    msg=exc.strerror,
+                )
+            )
         if options.save_raw_ocr_dir is not None:
             try:
-                os.stat(os.path.join(options.save_raw_ocr_dir, ''))
+                os.stat(os.path.join(options.save_raw_ocr_dir, ""))
             except EnvironmentError as ex:
-                errors.fatal('cannot open {path!r}: {msg}'.format(
-                    path=ex.filename,
-                    msg=ex[1],
-                ))
+                errors.fatal(
+                    "cannot open {path!r}: {msg}".format(
+                        path=ex.filename,
+                        msg=ex[1],
+                    )
+                )
             try:
-                expand_template(options.raw_ocr_filename_template, pageno=0, pageid='')
+                expand_template(options.raw_ocr_filename_template, pageno=0, pageid="")
             except ValueError as ex:
-                self.error('cannot parse filename template {tmpl!r}: {msg}'.format(
-                    tmpl=options.raw_ocr_filename_template,
-                    msg=ex,
-                ))
+                self.error(
+                    "cannot parse filename template {tmpl!r}: {msg}".format(
+                        tmpl=options.raw_ocr_filename_template,
+                        msg=ex,
+                    )
+                )
             except KeyError as ex:
-                self.error('cannot parse filename template {tmpl!r}: unknown field {key!r}'.format(
-                    tmpl=options.raw_ocr_filename_template,
-                    key=ex.args[0],
-                ))
+                self.error(
+                    "cannot parse filename template {tmpl!r}: unknown field {key!r}".format(
+                        tmpl=options.raw_ocr_filename_template,
+                        key=ex.args[0],
+                    )
+                )
         implicit_default_engine = options.engine is None
         ename = options.engine or self.engines.default
         options.engine = self.engines[ename]
@@ -363,10 +485,10 @@ class ArgumentParser(cli.ArgumentParser):
         kwargs = {}
         for prop in options.properties:
             try:
-                key, value = prop.split('=', 1)
+                key, value = prop.split("=", 1)
             except ValueError:
-                self.error('argument -X: expected KEY=VALUE')
-            key = key.replace('-', '_')
+                self.error("argument -X: expected KEY=VALUE")
+            key = key.replace("-", "_")
             kwargs[key] = value
         try:
             options.engine = options.engine(**kwargs)
@@ -375,7 +497,7 @@ class ArgumentParser(cli.ArgumentParser):
         except errors.EngineNotFound as ex:
             msg = str(ex)
             if implicit_default_engine:
-                msg += '; use -e/--engine to select another engine'
+                msg += "; use -e/--engine to select another engine"
             errors.fatal(msg)
         try:
             options.engine.check_language(options.language)
@@ -386,10 +508,13 @@ class ArgumentParser(cli.ArgumentParser):
         except errors.UnknownLanguageList:
             # For now, let's assume the language pack is installed.
             pass
-        options.uax29 = options.language if options.word_segmentation == 'uax29' else None
+        options.uax29 = (
+            options.language if options.word_segmentation == "uax29" else None
+        )
         if options.n_jobs is None:
             options.n_jobs = utils.get_cpu_count()
         return options
+
 
 class Results(dict):
     seen_exception = False
@@ -397,18 +522,20 @@ class Results(dict):
     def __missing__(self, key):
         return
 
-class Context(djvu.decode.Context):
 
+class Context(djvu.decode.Context):
     def init(self, options):
-        self._temp_dir = temporary.raw.mkdtemp(prefix='ocrodjvu.')
+        self._temp_dir = temporary.raw.mkdtemp(prefix="ocrodjvu.")
         self._debug = options.debug
         self._options = options
         bpp = 24 if self._options.render_layers != djvu.decode.RENDER_MASK_ONLY else 1
         self._image_format = self._options.engine.image_format(bpp)
 
-    def _temp_file(self, name, mode='w+', encoding=locale.getpreferredencoding(),auto_remove=True):
+    def _temp_file(
+        self, name, mode="w+", encoding=locale.getpreferredencoding(), auto_remove=True
+    ):
         path = os.path.join(self._temp_dir, name)
-        file = open(path,mode=mode,encoding=encoding)
+        file = open(path, mode=mode, encoding=encoding)
         if not self._debug and auto_remove:
             file = temporary.wrapper(file, file.name)
         return file
@@ -420,10 +547,11 @@ class Context(djvu.decode.Context):
     @contextlib.contextmanager
     def get_output_image(self, nth, page_job):
         output_format = self._image_format
-        file = self._temp_file('{n:06}.{ext}'.format(
-            n=nth,
-            ext=output_format.extension
-        ),mode='wb',encoding=None)
+        file = self._temp_file(
+            "{n:06}.{ext}".format(n=nth, ext=output_format.extension),
+            mode="wb",
+            encoding=None,
+        )
         try:
             output_format.write_image(page_job, self._options.render_layers, file)
             file.flush()
@@ -445,7 +573,7 @@ class Context(djvu.decode.Context):
         result.save(prefix)
 
     def process_page(self, page):
-        logger.info('- Page #{0}'.format(page.n + 1))
+        logger.info("- Page #{0}".format(page.n + 1))
         page_job = page.decode(wait=True)
         # Because of a bug in python-djvulibre <= 0.3.9,
         # sometimes the exception is not raised.
@@ -454,17 +582,23 @@ class Context(djvu.decode.Context):
             raise page_job.status
         size = page_job.size
         with self.get_output_image(page.n, page_job) as pfile:
-            result = self._engine.recognize(pfile, language=self._options.language, details=self._options.details, uax29=self._options.uax29)
+            result = self._engine.recognize(
+                pfile,
+                language=self._options.language,
+                details=self._options.details,
+                uax29=self._options.uax29,
+            )
             if self._debug:
-                result.save(os.path.join(self._temp_dir, '{n:06}'.format(n=page.n)))
+                result.save(os.path.join(self._temp_dir, "{n:06}".format(n=page.n)))
             self.save_raw_ocr(page, result)
-            [text] = self._engine.extract_text(result.as_stringio(),
+            [text] = self._engine.extract_text(
+                result.as_stringio(),
                 rotation=page.rotation,
                 details=self._options.details,
                 uax29=self._options.uax29,
                 html5=self._options.html5,
                 fix_utf8=self._engine.needs_utf8_fix,
-                page_size=size
+                page_size=size,
             )
             # It should be: (page 0 0 <width> <height> …):
             assert len(text) > 5
@@ -483,7 +617,7 @@ class Context(djvu.decode.Context):
             try:
                 result = self.process_page(page)
             except djvu.decode.NotAvailable:
-                logger.info('No image suitable for OCR.')
+                logger.info("No image suitable for OCR.")
                 result = False
             except (SystemExit, KeyboardInterrupt) as ex:
                 with condition:
@@ -491,10 +625,11 @@ class Context(djvu.decode.Context):
                 raise
             except Exception as ex:
                 try:
-                    interrupted_by_user = isinstance(ex, ipc.CalledProcessInterrupted) and ex.by_user
-                    message = 'Exception while processing page {n}:\n{tb}'.format(
-                        n=(n + 1),
-                        tb=traceback.format_exc()
+                    interrupted_by_user = (
+                        isinstance(ex, ipc.CalledProcessInterrupted) and ex.by_user
+                    )
+                    message = "Exception while processing page {n}:\n{tb}".format(
+                        n=(n + 1), tb=traceback.format_exc()
                     )
                     logger.error(message.rstrip())
                     if self._options.resume_on_error and not interrupted_by_user:
@@ -516,7 +651,7 @@ class Context(djvu.decode.Context):
 
     def _process(self, path, pages=None):
         self._engine = self._options.engine
-        logger.info('Processing {path}:'.format(path=path))
+        logger.info("Processing {path}:".format(path=path))
         document = self.new_document(djvu.decode.FileURI(path))
         document.decoding_job.wait()
         if pages is None:
@@ -526,36 +661,44 @@ class Context(djvu.decode.Context):
         results = Results()
         njobs = self._options.n_jobs
         thread_limit = utils.get_thread_limit(len(pages), njobs)
-        os.environ['OMP_THREAD_LIMIT'] = str(thread_limit)
+        os.environ["OMP_THREAD_LIMIT"] = str(thread_limit)
         condition = threading.Condition()
         threads = [
             threading.Thread(target=self.page_thread, args=(pages, results, condition))
             for i in range(njobs)
         ]
+
         def stop_threads():
             with condition:
                 for page in pages:
                     # Worker threads should not bother with processing other pages.
                     # Mark them as already taken.
                     results[page.n] = True
+
         for thread in threads:
             thread.start()
-        sed_file = self._temp_file('ocrodjvu.djvused', auto_remove=False)
+        sed_file = self._temp_file("ocrodjvu.djvused", auto_remove=False)
         try:
             if self._options.clear_text:
-                sed_file.write('remove-txt\n')
+                sed_file.write("remove-txt\n")
             for page in pages:
                 try:
                     file_id = page.file.id
                 except UnicodeError:
                     pageno = page.n + 1
-                    logger.warning('warning: cannot convert page {n} identifier to locale encoding'.format(n=pageno))
-                    sed_file.write('select {n}\n'.format(n=pageno))
+                    logger.warning(
+                        "warning: cannot convert page {n} identifier to locale encoding".format(
+                            n=pageno
+                        )
+                    )
+                    sed_file.write("select {n}\n".format(n=pageno))
                 else:
-                    sed_file.write("select '{fileid}'\n".format(
-                        fileid=file_id.replace('\\', '\\\\').replace("'", "\\'")
-                    ))
-                sed_file.write('set-txt\n')
+                    sed_file.write(
+                        "select '{fileid}'\n".format(
+                            fileid=file_id.replace("\\", "\\\\").replace("'", "\\'")
+                        )
+                    )
+                sed_file.write("set-txt\n")
                 result = None
                 with condition:
                     while True:
@@ -570,7 +713,7 @@ class Context(djvu.decode.Context):
                         break
                 if isinstance(result, Exception):
                     if len(threads) > 1:
-                        logger.info('Waiting for other threads to finish...')
+                        logger.info("Waiting for other threads to finish...")
                     for thread in threads:
                         thread.join()
                     self._debug = True
@@ -581,7 +724,7 @@ class Context(djvu.decode.Context):
                 else:
                     text_zones.print_sexpr(result, sed_file)
                 result = None  # no longer needed
-                sed_file.write('\n.\n\n')
+                sed_file.write("\n.\n\n")
             sed_file.flush()
             saver = self._options.saver
             if saver.in_place:
@@ -614,6 +757,7 @@ class Context(djvu.decode.Context):
         else:
             shutil.rmtree(self._temp_dir)
 
+
 def main(argv=sys.argv):
     options = ArgumentParser().parse_args(argv[1:])
     context = Context()
@@ -621,11 +765,16 @@ def main(argv=sys.argv):
     try:
         context.process(options.path, options.pages)
     except KeyboardInterrupt:
-        logger.info('Interrupted by user.')
+        logger.info("Interrupted by user.")
         sys.exit(errors.EXIT_FATAL)
     finally:
         temp_dir = context.close()
         if temp_dir is not None:
-            logger.info('Intermediate files were left in the {path!r} directory.'.format(path=temp_dir))
+            logger.info(
+                "Intermediate files were left in the {path!r} directory.".format(
+                    path=temp_dir
+                )
+            )
+
 
 # vim:ts=4 sts=4 sw=4 et
